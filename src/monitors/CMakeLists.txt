@@ -27,6 +27,8 @@ target_sources(ablateLibrary
         physicsTimeStep.cpp
         probes.hpp
         probes.cpp
+        rocketMonitor.hpp
+        rocketMonitor.cpp
         )
 
 add_subdirectory(logs)
