@@ -58,6 +58,8 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
         const PetscScalar* faceGeomArray;
         VecGetArrayRead(faceGeomVec, &faceGeomArray) >> checkError;
 
+        PetscReal tol = 1e-3;
+
         // initialize vectors (send_buffer)
         PetscReal mDotCell[3] = {0,0,0};
         PetscReal mDotTotal[3] = {0,0,0};
@@ -109,7 +111,11 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
                         for (PetscInt d = 0; d < dim; d++) {
                             mDotCell[d] = fg->normal[d]*cellEuler[finiteVolume::CompressibleFlowFields::RHOU+d]; // calculate mass flow rate for the cell
                             mDotTotal[d] = mDotTotal[d] + mDotCell[d]; // summation of total mass flow rate along fieldBoundary
-                            thrustCell[d] = (mDotCell[d])*((cellEuler[finiteVolume::CompressibleFlowFields::RHOU+d])/(cellEuler[finiteVolume::CompressibleFlowFields::RHO])) + (fg->normal[d])*(cellPressure-101325); // calculate thrust for the cell
+                            if (abs(mDotCell[d]) > tol) {
+                                thrustCell[d] = (mDotCell[d])*((cellEuler[finiteVolume::CompressibleFlowFields::RHOU+d])/(cellEuler[finiteVolume::CompressibleFlowFields::RHO])) + (fg->normal[d])*(cellPressure-101325); // calculate thrust for the cell
+                            } else {
+                                thrustCell[d] = (fg->normal[d])*(cellPressure-101325); // calculate thrust for the cell
+                            };
                             thrustTotal[d] = thrustTotal[d] + thrustCell[d]; // summation of total trust along fieldBoundary
                         }
                     }
@@ -122,12 +128,9 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
         // Take across all ranks
         MPI_Reduce(mDotTotal, mDotTotalGlob, bufferSize, MPI_DOUBLE, MPI_SUM, 0, comm);
         MPI_Reduce(thrustTotal, thrustTotalGlob, bufferSize, MPI_DOUBLE, MPI_SUM, 0, comm);
-//        MPI_Allreduce(mDotTotal, mDotTotalGlob, bufferSize, MPI_DOUBLE, MPI_SUM, comm);
-//        MPI_Allreduce(thrustTotal, thrustTotalGlob, bufferSize, MPI_DOUBLE, MPI_SUM, comm);
-
 
         for (PetscInt d = 0; d < dim; d++) {
-            if (mDotTotalGlob[d] > 0) { // avoid nan
+            if ( tol < abs(thrustTotalGlob[d]) && 1e-2 < abs(mDotTotalGlob[d])) { // avoid nan or dividing to near zero numbers
                 IspGlob[d] = thrustTotalGlob[d] / ((mDotTotalGlob[d]) * 9.8);  // calculate specific Impulse
             }
         }
@@ -141,9 +144,9 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
                 if (monitor->name != "") {  // If user passed a name argument then output name
                     monitor->log->Printf("%s ", monitor->name.c_str());
                 }
-                monitor->log->Printf("RocketMonitor for timestep %04d:\n", (int)step);
-                monitor->log->Printf("\tThrust:\t [ %1.3f, %1.3f, %1.3f]\n", thrustTotalGlob[0], thrustTotalGlob[1], thrustTotalGlob[2]);
-                monitor->log->Printf("\tIsp:\t [ %1.3f, %1.3f, %1.3f]\n", IspGlob[0], IspGlob[1], IspGlob[2]);
+                monitor->log->Printf("RocketMonitor for timestep %04d: time: %-8.4g\n", (int)step, (double)crtime);
+                monitor->log->Printf("\tThrust:\t [ %1.7f, %1.7f, %1.7f]\n", thrustTotalGlob[0], thrustTotalGlob[1], thrustTotalGlob[2]);
+                monitor->log->Printf("\tIsp:\t [ %1.7f, %1.7f, %1.7f]\n", IspGlob[0], IspGlob[1], IspGlob[2]);
             }
         }
 
