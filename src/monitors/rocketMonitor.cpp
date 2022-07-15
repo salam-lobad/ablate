@@ -35,7 +35,6 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
         // check to see if there is a ghost label
         DMLabel ghostLabel;
         DMGetLabel(dm, "ghost", &ghostLabel) >> checkError;
-//        PetscInt cellCount = 0;
 
         const auto& fieldEuler = monitor->GetSolver()->GetSubDomain().GetField("euler"); // get the euler field
         PetscReal* cellEuler;
@@ -53,10 +52,14 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
         Vec cellGeomVec;
         DMPlexComputeGeometryFVM(dm, &cellGeomVec, &faceGeomVec) >> checkError;
         DM faceDM;
+        DM cellDM;
 
         VecGetDM(faceGeomVec, &faceDM) >> checkError;
         const PetscScalar* faceGeomArray;
         VecGetArrayRead(faceGeomVec, &faceGeomArray) >> checkError;
+        VecGetDM(cellGeomVec, &cellDM) >> checkError;
+        const PetscScalar* cellGeomArray;
+        VecGetArrayRead(cellGeomVec, &cellGeomArray) >> checkError;
 
         PetscReal tol = 1e-3;
 
@@ -120,8 +123,6 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
                         }
                     }
                 }
-
-
             }
         }
 
@@ -149,6 +150,15 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
                 monitor->log->Printf("\tIsp:\t [ %1.7f, %1.7f, %1.7f]\n", IspGlob[0], IspGlob[1], IspGlob[2]);
             }
         }
+
+        // cleanup
+        VecRestoreArrayRead(faceGeomVec, &faceGeomArray) >> checkError;
+        VecRestoreArrayRead(cellGeomVec, &cellGeomArray) >> checkError;
+        VecDestroy(&cellGeomVec) >> checkError;
+        VecDestroy(&faceGeomVec) >> checkError;
+        VecRestoreArrayRead(auxVec, &auxArray) >> checkError;
+        VecRestoreArrayRead(solVec, &solArray) >> checkError;
+
 
     }
     PetscFunctionReturn(0);
