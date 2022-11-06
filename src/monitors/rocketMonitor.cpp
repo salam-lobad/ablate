@@ -204,7 +204,7 @@ PetscErrorCode ablate::monitors::RocketMonitor::OutputRocket(TS ts, PetscInt ste
                 monitor->log->Printf("\tmDot:\t\t [ %1.7f, %1.7f, %1.7f]\n", mDotTotalGlob[0], mDotTotalGlob[1], mDotTotalGlob[2]);
                 monitor->log->Printf("\tAdditional Fields: [min max mean]\n");
                 monitor->log->Printf("\tPressure:\t [ %1.7f, %1.7f, %1.7f]\n", pressureField[0], pressureField[1], pressureField[2]);
-                monitor->log->Printf("\tmachNumber:\t [ %1.7f, %1.7f, %1.7f]\n\n", machNumberField[0], machNumberField[1], machNumberField[2]);
+                monitor->log->Printf("\tmachNumber:\t [ %1.7f, %1.7f, %1.7f]\n", machNumberField[0], machNumberField[1], machNumberField[2]);
             }
         }
 
